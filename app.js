@@ -2,7 +2,7 @@
    Offline-first: a fonte de verdade é o localStorage.
    A sincronização com o Worker é opcional e faz merge por id/updatedAt. */
 
-const VERSAO = "1.0.0";
+const VERSAO = "1.0.1";
 const META = 350;
 const RITMO = META / 7;
 const K_DADOS = "gastos-familia-v1";
@@ -35,6 +35,20 @@ const segunda = (d) => {
 };
 const addDias = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
 const cat = (id) => CATS.find((c) => c.id === id) || CATS[CATS.length - 1];
+
+/* Aceita 1,80 · 1.80 · 1 234,56 · "1,80 €" — independente da região do telemóvel */
+function lerValor(txt) {
+  let s = String(txt).replace(/[^\d.,]/g, "");
+  if (!s) return NaN;
+  const v = s.lastIndexOf(","), p = s.lastIndexOf(".");
+  if (v > -1 && p > -1) {
+    // o separador que aparece por último é o decimal
+    s = v > p ? s.replace(/\./g, "").replace(",", ".") : s.replace(/,/g, "");
+  } else if (v > -1) {
+    s = s.replace(/,/g, ".");
+  }
+  return parseFloat(s);
+}
 
 let entradas = [];
 let ref = segunda(new Date());
@@ -222,7 +236,7 @@ function lancamentos(lista) {
 
 /* ---------- ações ---------- */
 function adicionar() {
-  const v = parseFloat(String($("valor").value).replace(",", "."));
+  const v = lerValor($("valor").value);
   if (!v || v <= 0) { $("valor").focus(); return; }
   const dia = $("dia").value || iso(new Date());
   entradas.push({
