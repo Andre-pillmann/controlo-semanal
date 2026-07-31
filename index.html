@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Controlo Semanal · Mari &amp; André</title>
+<meta name="description" content="Controlo de consumos variáveis da família com meta de 350 € por semana.">
+<link rel="manifest" href="./manifest.webmanifest">
+<meta name="theme-color" content="#0F1720">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Controlo">
+<link rel="apple-touch-icon" href="./apple-touch-icon.png">
+<link rel="icon" href="./icon-192.png">
+<style>
+:root{
+  --bg:#0F1720; --surface:#17212C; --surface2:#1D2936; --line:#26323F;
+  --text:#E8EDF2; --muted:#8A9AAB; --accent:#4E9FD1; --warn:#E0A458;
+  --over:#D9636B; --ok:#7FB685;
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);-webkit-text-size-adjust:100%}
+body{padding:max(20px,env(safe-area-inset-top)) 16px calc(48px + env(safe-area-inset-bottom))}
+.wrap{max-width:560px;margin:0 auto}
+.eyebrow{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:14px}
+.head{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+.head h1{font-size:20px;font-weight:600;margin:4px 0 0}
+.nav{display:flex;gap:6px}
+button{font-family:var(--sans)}
+.ghost{background:var(--surface);border:1px solid var(--line);color:var(--text);width:34px;height:34px;border-radius:8px;font-size:17px;cursor:pointer}
+.ghost:disabled{opacity:.35}
+.row{display:flex;align-items:baseline;justify-content:space-between}
+.big{font-family:var(--mono);font-size:40px;font-weight:600;letter-spacing:-.02em;line-height:1.1}
+.side{text-align:right;font-family:var(--mono);font-size:13px;color:var(--muted)}
+.track{height:6px;background:var(--surface2);border-radius:3px;margin:14px 0 10px;overflow:hidden}
+.track>div{height:100%;transition:width .3s}
+.status{font-size:13px;margin-bottom:14px}
+.status span{color:var(--muted)}
+svg{width:100%;display:block}
+.pace{font-size:12px;color:var(--muted);margin-top:6px;font-family:var(--mono)}
+input,select{background:var(--surface2);border:1px solid var(--line);border-radius:8px;color:var(--text);
+  padding:10px 12px;font-size:16px;font-family:var(--sans);outline:none;width:100%;appearance:none}
+input:focus,select:focus,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.f{display:flex;gap:8px;margin-bottom:8px}
+#valor{width:118px;font-family:var(--mono);font-size:17px}
+#quem{width:112px}
+#dia{flex:1}
+.primary{background:var(--accent);color:#0B1220;border:none;border-radius:8px;padding:10px 22px;font-size:15px;font-weight:600;cursor:pointer;white-space:nowrap}
+.catrow{margin-bottom:12px}
+.catlab{display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px}
+.catlab b{font-weight:400;font-family:var(--mono);color:var(--muted)}
+.catbar{height:4px;background:var(--surface2);border-radius:2px;overflow:hidden}
+.catbar>div{height:100%}
+.item{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--line)}
+.chip{width:3px;height:26px;border-radius:2px;flex-shrink:0}
+.item .m{flex:1;min-width:0}
+.item .d{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item .s{font-size:11px;color:var(--muted);margin-top:2px}
+.item .v{font-family:var(--mono);font-size:15px}
+.del{background:none;border:none;color:var(--muted);font-size:19px;cursor:pointer;padding:0 2px;line-height:1}
+.empty{color:var(--muted);font-size:14px;padding:6px 0 4px}
+.foot{font-size:11px;color:var(--muted);text-align:center;margin-top:18px;line-height:1.7}
+.foot a{color:var(--muted)}
+details summary{cursor:pointer;list-style:none;color:var(--muted);font-size:11px;letter-spacing:.14em;text-transform:uppercase}
+details summary::-webkit-details-marker{display:none}
+details[open] summary{margin-bottom:14px}
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--muted);margin-right:6px;vertical-align:middle}
+.hint{font-size:12px;color:var(--muted);margin:-2px 0 10px;line-height:1.5}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="head">
+    <div>
+      <div class="eyebrow">Mari &amp; André · meta 350 €/semana</div>
+      <h1 id="semana">—</h1>
+    </div>
+    <div class="nav">
+      <button class="ghost" id="prev" aria-label="Semana anterior">‹</button>
+      <button class="ghost" id="next" aria-label="Semana seguinte">›</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="row">
+      <div>
+        <div class="eyebrow" id="restLabel">Resta</div>
+        <div class="big" id="restante">—</div>
+      </div>
+      <div class="side">
+        <div id="gasto">—</div>
+        <div id="pctTxt">—</div>
+      </div>
+    </div>
+    <div class="track"><div id="bar" style="width:0"></div></div>
+    <div class="status" id="estado">—</div>
+    <svg id="grafico" viewBox="0 0 340 130" role="img" aria-label="Acumulado da semana face ao ritmo ideal"></svg>
+    <div class="pace" id="ritmo">—</div>
+  </div>
+
+  <div class="card">
+    <div class="eyebrow" style="margin-bottom:12px">Lançar gasto</div>
+    <div class="f">
+      <input id="valor" type="number" inputmode="decimal" step="0.01" placeholder="0,00" aria-label="Valor">
+      <input id="desc" type="text" placeholder="Descrição" aria-label="Descrição">
+    </div>
+    <div class="f">
+      <select id="cat" aria-label="Categoria"></select>
+      <select id="quem" aria-label="Quem pagou"></select>
+    </div>
+    <div class="f" style="margin-bottom:0">
+      <input id="dia" type="date" aria-label="Data">
+      <button class="primary" id="add">Adicionar</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="eyebrow" style="margin-bottom:14px">Por categoria</div>
+    <div id="cats"></div>
+  </div>
+
+  <div class="card">
+    <div class="eyebrow" style="margin-bottom:14px" id="lancLabel">Lançamentos</div>
+    <div id="lista"></div>
+  </div>
+
+  <div class="card">
+    <details id="cfg">
+      <summary><span class="dot" id="syncDot"></span><span id="syncLabel">Sincronização</span></summary>
+      <p class="hint">Para a Mari ver os mesmos lançamentos, cole aqui o endereço do Worker e a mesma chave nos dois telemóveis. Sem isto, a app funciona só neste aparelho.</p>
+      <div class="f"><input id="syncUrl" type="url" placeholder="https://controlo.xxx.workers.dev" aria-label="Endereço do Worker"></div>
+      <div class="f"><input id="syncKey" type="text" placeholder="Chave partilhada" aria-label="Chave partilhada"></div>
+      <div class="f" style="margin-bottom:0">
+        <button class="primary" id="salvarCfg">Guardar</button>
+        <button class="ghost" id="sincronizar" style="width:auto;padding:0 16px">Sincronizar agora</button>
+      </div>
+      <p class="hint" id="syncMsg" style="margin:10px 0 0"></p>
+    </details>
+  </div>
+
+  <div class="foot">
+    Semana de segunda a domingo · meta 350 € · ritmo 50 €/dia<br>
+    <span id="ver"></span>
+  </div>
+</div>
+<script src="./app.js"></script>
+</body>
+</html>
