@@ -2,7 +2,7 @@
    Offline-first: a fonte de verdade é o localStorage.
    A sincronização com o Worker é opcional e faz merge por id/updatedAt. */
 
-const VERSAO = "1.0.1";
+const VERSAO = "1.1.2";
 const META = 350;
 const RITMO = META / 7;
 const K_DADOS = "gastos-familia-v1";
@@ -10,16 +10,18 @@ const K_URL = "sync-url";
 const K_KEY = "sync-key";
 
 const CATS = [
-  { id: "mercado",    nome: "Supermercado",      verba: 120, cor: "#4E9FD1" },
-  { id: "feira",      nome: "Feira & padaria",   verba: 45,  cor: "#6FB3D6" },
-  { id: "fora",       nome: "Refeições fora",    verba: 45,  cor: "#E0A458" },
-  { id: "transporte", nome: "Transporte",        verba: 50,  cor: "#9C89C4" },
-  { id: "casa",       nome: "Casa & limpeza",    verba: 25,  cor: "#7FB685" },
-  { id: "saude",      nome: "Saúde & farmácia",  verba: 20,  cor: "#D9636B" },
-  { id: "criancas",   nome: "Crianças & escola", verba: 20,  cor: "#E88FA0" },
-  { id: "lazer",      nome: "Lazer & cultura",   verba: 15,  cor: "#5FC2B0" },
-  { id: "outros",     nome: "Outros",            verba: 10,  cor: "#8A9AAB" },
+  { id: "mercado",    nome: "Supermercado",      verba: 165, cor: "#4E9FD1" },
+  { id: "feira",      nome: "Feira & padaria",   verba: 12,  cor: "#6FB3D6" },
+  { id: "fora",       nome: "Refeições fora",    verba: 55,  cor: "#E0A458" },
+  { id: "carro",      nome: "Carro (energia)",   verba: 45,  cor: "#9C89C4" },
+  { id: "transporte", nome: "Transportes",       verba: 12,  cor: "#B3A6D6" },
+  { id: "saude",      nome: "Saúde & farmácia",  verba: 15,  cor: "#D9636B" },
+  { id: "criancas",   nome: "Crianças & escola", verba: 15,  cor: "#E88FA0" },
+  { id: "lazer",      nome: "Lazer & cultura",   verba: 25,  cor: "#5FC2B0" },
+  { id: "outros",     nome: "Outros",            verba: 6,   cor: "#8A9AAB" },
 ];
+// categorias antigas -> atuais, para os lançamentos já feitos não se perderem
+const LEGADO = { casa: "mercado" };
 const QUEM = ["Casa", "Mari", "André"];
 const DIAS = ["seg", "ter", "qua", "qui", "sex", "sáb", "dom"];
 
@@ -34,7 +36,10 @@ const segunda = (d) => {
   return x;
 };
 const addDias = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
-const cat = (id) => CATS.find((c) => c.id === id) || CATS[CATS.length - 1];
+const cat = (id) => {
+  const alvo = LEGADO[id] || id;
+  return CATS.find((c) => c.id === alvo) || CATS[CATS.length - 1];
+};
 
 /* Aceita 1,80 · 1.80 · 1 234,56 · "1,80 €" — independente da região do telemóvel */
 function lerValor(txt) {
@@ -194,7 +199,7 @@ function grafico(s, desvio) {
 
 function categorias(lista) {
   $("cats").innerHTML = CATS.map((c) => {
-    const g = lista.filter((e) => e.cat === c.id).reduce((s, e) => s + e.amount, 0);
+    const g = lista.filter((e) => cat(e.cat).id === c.id).reduce((s, e) => s + e.amount, 0);
     const p = Math.min(100, (g / c.verba) * 100);
     const over = g > c.verba;
     return `<div class="catrow">
