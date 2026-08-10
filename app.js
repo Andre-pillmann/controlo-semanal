@@ -2,7 +2,7 @@
    Offline-first: a fonte de verdade é o localStorage.
    A sincronização com o Worker é opcional e faz merge por id/updatedAt. */
 
-const VERSAO = "1.1.2";
+const VERSAO = "1.2.0";
 const META = 350;
 const RITMO = META / 7;
 const K_DADOS = "gastos-familia-v1";
@@ -268,6 +268,63 @@ function remover(id) {
   gravar(); render(); sincronizar();
 }
 
+/* ---------- exportação ---------- */
+// Excel em português usa ; como separador de colunas e , como decimal
+function csvCampo(s) {
+  s = String(s ?? "");
+  return /[";\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
+
+function exportarCSV() {
+  const linhas = entradas
+    .filter((e) => !e.deleted)
+    .sort((a, b) => a.date.localeCompare(b.date) || a.id - b.id);
+
+  if (!linhas.length) {
+    $("expMsg").textContent = "Ainda não há lançamentos para exportar.";
+    return;
+  }
+
+  const cab = ["Data", "Semana", "Dia", "Descrição", "Categoria", "Quem", "Valor"];
+  const corpo = linhas.map((e) => {
+    const d = new Date(e.date + "T00:00");
+    return [
+      e.date,
+      iso(segunda(d)),
+      DIAS[(d.getDay() + 6) % 7],
+      e.desc,
+      cat(e.cat).nome,
+      e.who,
+      e.amount.toFixed(2).replace(".", ","),
+    ].map(csvCampo).join(";");
+  });
+
+  // BOM à cabeça para o Excel reconhecer os acentos
+  const txt = "\uFEFF" + [cab.join(";"), ...corpo].join("\r\n");
+  const nome = `controlo-semanal-${iso(new Date())}.csv`;
+  const blob = new Blob([txt], { type: "text/csv;charset=utf-8" });
+
+  // no telemóvel abre a folha de partilha; no computador descarrega
+  try {
+    const ficheiro = new File([blob], nome, { type: "text/csv" });
+    if (navigator.canShare && navigator.canShare({ files: [ficheiro] })) {
+      navigator.share({ files: [ficheiro], title: "Controlo semanal" }).catch(() => {});
+      $("expMsg").textContent = `${linhas.length} lançamentos prontos a enviar.`;
+      return;
+    }
+  } catch {}
+
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = nome;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+  $("expMsg").textContent = `${linhas.length} lançamentos exportados.`;
+}
+
 /* ---------- arranque ---------- */
 function iniciar() {
   $("cat").innerHTML = CATS.map((c) => `<option value="${c.id}">${c.nome}</option>`).join("");
@@ -289,6 +346,7 @@ function iniciar() {
     estadoSync("Guardado.", "var(--ok)");
     sincronizar();
   });
+  $("exportar").addEventListener("click", exportarCSV);
   $("sincronizar").addEventListener("click", () => sincronizar(false));
   window.addEventListener("online", () => sincronizar());
   document.addEventListener("visibilitychange", () => { if (!document.hidden) sincronizar(); });

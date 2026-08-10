@@ -1,5 +1,5 @@
 /* Service worker: shell em cache, atualiza em segundo plano. */
-const CACHE = "controlo-v1.1.2";
+const CACHE = "controlo-v1.2.0";
 const SHELL = [
   "./", "./index.html", "./app.js", "./manifest.webmanifest",
   "./icon-192.png", "./icon-512.png", "./icon-maskable-512.png", "./apple-touch-icon.png"
