@@ -2,23 +2,25 @@
    Offline-first: a fonte de verdade é o localStorage.
    A sincronização com o Worker é opcional e faz merge por id/updatedAt. */
 
-const VERSAO = "1.2.0";
-const META = 350;
+const VERSAO = "1.3.0";
+const META = 400;
 const RITMO = META / 7;
 const K_DADOS = "gastos-familia-v1";
 const K_URL = "sync-url";
 const K_KEY = "sync-key";
 
 const CATS = [
-  { id: "mercado",    nome: "Supermercado",      verba: 165, cor: "#4E9FD1" },
-  { id: "feira",      nome: "Feira & padaria",   verba: 12,  cor: "#6FB3D6" },
-  { id: "fora",       nome: "Refeições fora",    verba: 55,  cor: "#E0A458" },
-  { id: "carro",      nome: "Carro (energia)",   verba: 45,  cor: "#9C89C4" },
-  { id: "transporte", nome: "Transportes",       verba: 12,  cor: "#B3A6D6" },
-  { id: "saude",      nome: "Saúde & farmácia",  verba: 15,  cor: "#D9636B" },
-  { id: "criancas",   nome: "Crianças & escola", verba: 15,  cor: "#E88FA0" },
-  { id: "lazer",      nome: "Lazer & cultura",   verba: 25,  cor: "#5FC2B0" },
-  { id: "outros",     nome: "Outros",            verba: 6,   cor: "#8A9AAB" },
+  { id: "mercado",    nome: "Supermercado",        verba: 160, cor: "#4E9FD1" },
+  { id: "feira",      nome: "Feira & padaria",     verba: 10,  cor: "#6FB3D6" },
+  { id: "fora",       nome: "Refeições fora",      verba: 120, cor: "#E0A458" },
+  { id: "carro",      nome: "Carro (energia)",     verba: 30,  cor: "#9C89C4" },
+  { id: "transporte", nome: "Transportes",         verba: 25,  cor: "#B3A6D6" },
+  { id: "saude",      nome: "Saúde & farmácia",    verba: 3,   cor: "#D9636B" },
+  { id: "criancas",   nome: "Crianças & escola",   verba: 5,   cor: "#E88FA0" },
+  { id: "lazer",      nome: "Lazer & cultura",     verba: 15,  cor: "#5FC2B0" },
+  { id: "outros",     nome: "Outros",              verba: 7,   cor: "#8A9AAB" },
+  { id: "vestuario",  nome: "Vestuário",           verba: 15,  cor: "#D4B483" },
+  { id: "animal",     nome: "Animal de estimação", verba: 10,  cor: "#A3C97C" },
 ];
 // categorias antigas -> atuais, para os lançamentos já feitos não se perderem
 const LEGADO = { casa: "mercado" };
@@ -194,7 +196,7 @@ function grafico(s, desvio) {
     <line x1="${padL}" y1="${py(0)}" x2="${W - padR}" y2="${py(META)}" stroke="var(--muted)" stroke-dasharray="3 4" opacity=".55"/>
     <polyline points="${pts.join(" ")}" fill="none" stroke="${cor}" stroke-width="2.2" stroke-linejoin="round"/>
     ${bolas}${labels}
-    <text x="${W - padR}" y="${py(META) - 5}" font-size="9" fill="var(--muted)" text-anchor="end">350</text>`;
+    <text x="${W - padR}" y="${py(META) - 5}" font-size="9" fill="var(--muted)" text-anchor="end">${META}</text>`;
 }
 
 function categorias(lista) {
@@ -327,6 +329,8 @@ function exportarCSV() {
 
 /* ---------- arranque ---------- */
 function iniciar() {
+  $("metaTopo").textContent = `meta ${META} €/semana`;
+  $("rodMeta").textContent = `meta ${META} € · ritmo ${Math.round(RITMO)} €/dia`;
   $("cat").innerHTML = CATS.map((c) => `<option value="${c.id}">${c.nome}</option>`).join("");
   $("quem").innerHTML = QUEM.map((q) => `<option value="${q}">${q}</option>`).join("");
   $("dia").value = iso(new Date());
