@@ -2,7 +2,7 @@
    Offline-first: a fonte de verdade é o localStorage.
    A sincronização com o Worker é opcional e faz merge por id/updatedAt. */
 
-const VERSAO = "1.5.1";
+const VERSAO = "1.5.2";
 const META = 150;            // meta semanal das categorias gerais (sem mercado)
 const RITMO = META / 7;
 const ID_MERCADO = "mercado"; // lançável, mas fora da meta e do gráfico: só para controlo
@@ -371,8 +371,26 @@ function iniciar() {
 
   ler(); render(); sincronizar();
 
-  if ("serviceWorker" in navigator)
-    navigator.serviceWorker.register("./sw.js").catch(() => {});
+  if ("serviceWorker" in navigator) {
+    // quando uma versão nova toma conta, recarrega uma única vez para a mostrar já
+    const tinhaControlo = !!navigator.serviceWorker.controller;
+    let recarregou = false;
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (!tinhaControlo || recarregou) return;
+      recarregou = true;
+      location.reload();
+    });
+    navigator.serviceWorker
+      .register("./sw.js", { updateViaCache: "none" })
+      .then((reg) => {
+        reg.update().catch(() => {});
+        // sempre que a app volta ao primeiro plano, procura versão nova
+        document.addEventListener("visibilitychange", () => {
+          if (!document.hidden) reg.update().catch(() => {});
+        });
+      })
+      .catch(() => {});
+  }
 }
 
 iniciar();

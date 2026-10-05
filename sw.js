@@ -1,12 +1,20 @@
-/* Service worker: shell em cache, atualiza em segundo plano. */
-const CACHE = "controlo-v1.5.1";
+/* Service worker: rede primeiro, cache só como reserva sem ligação.
+   Assim cada abertura com internet traz sempre a versão mais recente;
+   sem internet, a app abre com a última cópia guardada. */
+const CACHE = "controlo-v1.5.2";
 const SHELL = [
   "./", "./index.html", "./app.js", "./manifest.webmanifest",
   "./icon-192.png", "./icon-512.png", "./icon-maskable-512.png", "./apple-touch-icon.png"
 ];
 
 self.addEventListener("install", (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
+  // "reload" ignora a cópia que o próprio navegador guardou (o GitHub Pages
+  // deixa-a valer ~10 min), para o cache novo nascer já com ficheiros frescos
+  e.waitUntil(
+    caches.open(CACHE)
+      .then((c) => c.addAll(SHELL.map((u) => new Request(u, { cache: "reload" }))))
+      .then(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener("activate", (e) => {
@@ -21,15 +29,19 @@ self.addEventListener("fetch", (e) => {
   const url = new URL(e.request.url);
   // pedidos de sincronização e outros domínios passam direto
   if (e.request.method !== "GET" || url.origin !== self.location.origin) return;
+
   e.respondWith(
-    caches.match(e.request).then((hit) => {
-      const rede = fetch(e.request)
-        .then((r) => {
-          if (r.ok) caches.open(CACHE).then((c) => c.put(e.request, r.clone()));
-          return r;
-        })
-        .catch(() => hit);
-      return hit || rede;
-    })
+    // "no-cache" obriga o navegador a confirmar com o servidor antes de usar a cópia dele
+    fetch(new Request(e.request.url, { cache: "no-cache" }))
+      .then((r) => {
+        if (r.ok) {
+          const copia = r.clone();
+          caches.open(CACHE).then((c) => c.put(e.request, copia));
+        }
+        return r;
+      })
+      .catch(() =>
+        caches.match(e.request).then((hit) => hit || caches.match("./index.html"))
+      )
   );
 });
