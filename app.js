@@ -2,26 +2,28 @@
    Offline-first: a fonte de verdade é o localStorage.
    A sincronização com o Worker é opcional e faz merge por id/updatedAt. */
 
-const VERSAO = "1.3.0";
-const META = 400;
+const VERSAO = "1.5.1";
+const META = 150;            // meta semanal das categorias gerais (sem mercado)
 const RITMO = META / 7;
+const ID_MERCADO = "mercado"; // lançável, mas fora da meta e do gráfico: só para controlo
 const K_DADOS = "gastos-familia-v1";
 const K_URL = "sync-url";
 const K_KEY = "sync-key";
 
 const CATS = [
   { id: "mercado",    nome: "Supermercado",        verba: 160, cor: "#4E9FD1" },
-  { id: "feira",      nome: "Feira & padaria",     verba: 10,  cor: "#6FB3D6" },
-  { id: "fora",       nome: "Refeições fora",      verba: 120, cor: "#E0A458" },
-  { id: "carro",      nome: "Carro (energia)",     verba: 30,  cor: "#9C89C4" },
-  { id: "transporte", nome: "Transportes",         verba: 25,  cor: "#B3A6D6" },
+  { id: "feira",      nome: "Feira & padaria",     verba: 6,  cor: "#6FB3D6" },
+  { id: "fora",       nome: "Refeições fora",      verba: 45, cor: "#E0A458" },
+  { id: "carro",      nome: "Carro (energia)",     verba: 40,  cor: "#9C89C4" },
+  { id: "transporte", nome: "Transportes",         verba: 12,  cor: "#B3A6D6" },
   { id: "saude",      nome: "Saúde & farmácia",    verba: 3,   cor: "#D9636B" },
-  { id: "criancas",   nome: "Crianças & escola",   verba: 5,   cor: "#E88FA0" },
-  { id: "lazer",      nome: "Lazer & cultura",     verba: 15,  cor: "#5FC2B0" },
-  { id: "outros",     nome: "Outros",              verba: 7,   cor: "#8A9AAB" },
+  { id: "criancas",   nome: "Crianças & escola",   verba: 4,   cor: "#E88FA0" },
+  { id: "lazer",      nome: "Lazer & cultura",     verba: 10,  cor: "#5FC2B0" },
+  { id: "outros",     nome: "Outros",              verba: 5,   cor: "#8A9AAB" },
   { id: "vestuario",  nome: "Vestuário",           verba: 15,  cor: "#D4B483" },
   { id: "animal",     nome: "Animal de estimação", verba: 10,  cor: "#A3C97C" },
 ];
+const META_MERCADO = CATS.find((c) => c.id === ID_MERCADO).verba;
 // categorias antigas -> atuais, para os lançamentos já feitos não se perderem
 const LEGADO = { casa: "mercado" };
 const QUEM = ["Casa", "Mari", "André"];
@@ -123,9 +125,14 @@ function semana() {
   const lista = entradas
     .filter((e) => !e.deleted && e.date >= ini && e.date <= fim)
     .sort((a, b) => (a.date === b.date ? b.id - a.id : b.date.localeCompare(a.date)));
-  const total = lista.reduce((s, e) => s + e.amount, 0);
+  // o painel principal e o gráfico contam só o que não é mercado
+  const geral = lista.filter((e) => cat(e.cat).id !== ID_MERCADO);
+  const total = geral.reduce((s, e) => s + e.amount, 0);
+  const totalMercado = lista
+    .filter((e) => cat(e.cat).id === ID_MERCADO)
+    .reduce((s, e) => s + e.amount, 0);
   const porDia = Array(7).fill(0);
-  lista.forEach((e) => {
+  geral.forEach((e) => {
     const i = Math.round((new Date(e.date + "T00:00") - ref) / 86400000);
     if (i >= 0 && i < 7) porDia[i] += e.amount;
   });
@@ -134,7 +141,7 @@ function semana() {
   const hoje = segunda(new Date()).getTime() === ref.getTime();
   const passada = new Date(fim + "T23:59") < new Date();
   const diaIdx = hoje ? (new Date().getDay() + 6) % 7 : passada ? 6 : 0;
-  return { ini, fim, lista, total, porDia, acumulado, hoje, passada, diaIdx };
+  return { ini, fim, lista, geral, total, totalMercado, porDia, acumulado, hoje, passada, diaIdx };
 }
 
 /* ---------- render ---------- */
@@ -174,7 +181,7 @@ function render() {
   $("ritmo").textContent = `ritmo ideal ${eur(esperado)} · ${desvio > 0 ? eur(desvio) + " acima" : eur(-desvio) + " abaixo"}`;
 
   grafico(s, desvio);
-  categorias(s.lista);
+  categorias(s);
   lancamentos(s.lista);
 }
 
@@ -199,11 +206,10 @@ function grafico(s, desvio) {
     <text x="${W - padR}" y="${py(META) - 5}" font-size="9" fill="var(--muted)" text-anchor="end">${META}</text>`;
 }
 
-function categorias(lista) {
-  $("cats").innerHTML = CATS.map((c) => {
-    const g = lista.filter((e) => cat(e.cat).id === c.id).reduce((s, e) => s + e.amount, 0);
+function categorias(s) {
+  const linha = (c, g, soControlo) => {
     const p = Math.min(100, (g / c.verba) * 100);
-    const over = g > c.verba;
+    const over = !soControlo && g > c.verba;
     return `<div class="catrow">
       <div class="catlab">
         <span style="color:${g ? "var(--text)" : "var(--muted)"}">${c.nome}</span>
@@ -211,7 +217,15 @@ function categorias(lista) {
       </div>
       <div class="catbar"><div style="width:${p}%;background:${over ? "var(--over)" : c.cor}"></div></div>
     </div>`;
+  };
+  const gerais = CATS.filter((c) => c.id !== ID_MERCADO).map((c) => {
+    const g = s.geral.filter((e) => cat(e.cat).id === c.id).reduce((t, e) => t + e.amount, 0);
+    return linha(c, g, false);
   }).join("");
+  const aparte =
+    `<div class="aparte">Só controlo · não conta nos ${eur(META)}</div>` +
+    linha(cat(ID_MERCADO), s.totalMercado, true);
+  $("cats").innerHTML = gerais + aparte;
 }
 
 function lancamentos(lista) {
@@ -330,7 +344,7 @@ function exportarCSV() {
 /* ---------- arranque ---------- */
 function iniciar() {
   $("metaTopo").textContent = `meta ${META} €/semana`;
-  $("rodMeta").textContent = `meta ${META} € · ritmo ${Math.round(RITMO)} €/dia`;
+  $("rodMeta").textContent = `meta ${META} € · ritmo ${Math.round(RITMO)} €/dia · supermercado só para controlo`;
   $("cat").innerHTML = CATS.map((c) => `<option value="${c.id}">${c.nome}</option>`).join("");
   $("quem").innerHTML = QUEM.map((q) => `<option value="${q}">${q}</option>`).join("");
   $("dia").value = iso(new Date());
